@@ -1,3 +1,16 @@
+# Helm
+
+![Helm image](Image/helm.png)
+
+# Table of contents
+
+* [**Introduction to Helm**](#introduction-to-helm)
+* [**Getting Started with Helm**](#getting-started-with-helm)
+* [**Deploying single microservice**](#deploying-single-microservice)
+* [**Deploying multiple microservice**](#deploying-multiple-microservice)
+* [**Deploying using umbrella chart**](#deploying-using-umbrella-chart)
+* [**Reference**](#reference)
+
 # Introduction to Helm
 
 Helm is a tool that automates the creation, packaging, configuration, and deployment of Kubernetes applications by combining your configuration files into a single reusable package.
@@ -194,10 +207,489 @@ kubectl get all
 
 ## Delete the Installed Release
 
-To delete the release named my-release-name that you've previously installed, run:
+To delete the release named nginx that you've previously installed, run:
 
 ```
 helm uninstall nginx
 ```
 
-`nginx` is name you released.
+This command will delete all deployment and services installed.
+
+# Deploying single microservice
+
+Deploying a **todoapi** using an H2 database on a Kubernetes cluster via Helm requires multiple steps, from creating the application, Dockerizing it, pushing the Docker image to a registry, creating a Helm chart.
+
+Here's a step-by-step guide to deploying your todoapi with an H2 database using helm chart.
+
+**1. Create a New Chart**
+
+This command will create a new directory called TodoApi_H2 with the structure and files of a basic chart.
+
+```
+helm create TodoApi_H2
+```
+
+When you first create a chart, it comes with a few example templates. Navigate to the templates directory inside your chart
+
+* delete everything under /templates, keeping only `_helpers.tpl`,`deployment.yaml`,`service.yaml`
+* delete `tests` folder under `templates`
+
+**2. Add Kubernetes files to our new Chart**
+
+* Add deployment.yaml
+
+```markdown
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: todo-api-h2
+spec:
+  replicas: {{ .Values.replicaCount }}
+  selector:
+    matchLabels:
+      {{ include "TodoApi_H2.selectorLabels" . | nindent 6 }}
+  template:
+    metadata:
+      labels:
+        {{ include "TodoApi_H2.selectorLabels" . | nindent 8 }}
+    spec:
+      containers:
+      - name: {{ .Values.container.name }}
+        image: {{ .Values.image.repository }}
+        ports:
+        - containerPort: {{ .Values.service.targetPort }}
+```
+
+* Add service.yaml
+
+```markdown
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "TodoApi_H2.fullname" . }}
+  labels:
+    {{ include "TodoApi_H2.labels" . | nindent 4 }}
+spec:
+  type: {{ .Values.service.type }}
+  ports:
+    - port: {{ .Values.service.port }}
+      targetPort: {{ .Values.service.targetPort }}
+      protocol: TCP
+      name: http
+  selector:
+    {{ include "TodoApi_H2.selectorLabels" . | nindent 4 }}
+```
+
+* Add values.yaml
+
+```markdown
+replicaCount: 1
+
+image:
+  repository: vijaynvb/todoapih2:1.0
+
+service:
+  type: NodePort
+  port: 80
+  name: svctodoh2api
+  targetPort: 80
+
+container:
+  name: todoapi-h2
+```
+
+**3. Install our app using our Chart**
+
+```
+helm install todoapi .\TodoApi_H2\ 
+
+# see our deployed components
+
+kubectl get all
+``` 
+
+Your **todoapi** using H2 should now be running in a pod within your Kubernetes cluster!
+
+**4. packaging the helm chart**
+
+A "package" refers to a compressed, tarred chart that has been prepared for distribution. It bundles all the essential details of a Helm chart into a single, versioned artifact, making it easy to share and deploy.
+
+```
+# change directory to helm chart folder
+cd .\TodoApi_H2\
+
+# package command and save it in chart folder
+helm package . -d .\charts\  
+```
+
+**5. Creating the Chart Repository Index**
+
+A chart repository is an HTTP server that houses one or more chart packages. Each chart repository can have its own index.yaml file that contains information about available charts in that repository.
+
+```
+# change directory to helm chart folder
+cd .\TodoApi_H2\
+
+# index command
+helm repo index .\charts\  
+```
+
+# Deploying multiple microservice
+
+In this example we will deploy two service **mysql** and **todoapi**
+
+* [**Deploy mysql**](#deploy-mysql)
+* [**Deploy TodoApi**](#deploy-todoapi)
+
+## Deploy mysql
+
+Deploying a **mysql** database on a Kubernetes cluster via Helm.
+
+Here's a step-by-step guide to deploying your mysql database using helm chart.
+
+**1. Create a New Chart**
+
+This command will create a new directory called mysql with the structure and files of a basic chart.
+
+```
+helm create mysql
+```
+
+When you first create a chart, it comes with a few example templates. Navigate to the templates directory inside your chart
+
+* delete everything under /templates, keeping only `_helpers.tpl`,`deployment.yaml`,`service.yaml`
+* delete `tests` folder under `templates`
+
+**2. Add Kubernetes files to our new Chart**
+
+* Add deployment.yaml
+
+```markdown
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: mysql
+spec:
+  replicas: {{ .Values.replicaCount }}
+  selector:
+    matchLabels:
+      {{ include "mysql.selectorLabels" . | nindent 6 }}
+  template:
+    metadata:
+      labels:
+        {{ include "mysql.selectorLabels" . | nindent 8 }}
+    spec:
+      containers:
+      - name: {{ .Values.container.name }}
+        image: {{ .Values.image.repository }}
+        env:
+        - name: {{ .Values.env1.name }}
+          value: {{ .Values.env1.value }}
+        - name: {{ .Values.env2.name }}
+          value: {{ .Values.env2.value }}
+        ports:
+        - containerPort: {{ .Values.service.targetPort }}
+```
+
+* Add service.yaml
+
+```markdown
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "mysql.fullname" . }}
+  labels:
+    {{ include "mysql.labels" . | nindent 4 }}
+spec:
+  type: {{ .Values.service.type }}
+  ports:
+    - port: {{ .Values.service.port }}
+      targetPort: {{ .Values.service.targetPort }}
+      protocol: TCP
+      name: http
+  selector:
+    {{ include "mysql.selectorLabels" . | nindent 4 }}
+```
+
+* Add values.yaml
+
+```markdown
+replicaCount: 1
+
+image:
+  repository: mysql
+
+service:
+  type: NodePort
+  port: 3306
+  targetPort: 3306
+
+container:
+  name: mysql
+
+env1:
+  name: MYSQL_DATABASE
+  value: tododb
+
+env2:
+  name: MYSQL_ROOT_PASSWORD
+  value: password
+```
+
+**3. packaging the helm chart**
+
+A "package" refers to a compressed, tarred chart that has been prepared for distribution. It bundles all the essential details of a Helm chart into a single, versioned artifact, making it easy to share and deploy.
+
+```
+# change directory to helm chart folder
+cd .\mysql\
+
+# package command and save it in chart folder
+helm package . -d .\charts\  
+```
+
+**4. Creating the Chart Repository Index**
+
+A chart repository is an HTTP server that houses one or more chart packages. Each chart repository can have its own index.yaml file that contains information about available charts in that repository.
+
+```
+# change directory to helm chart folder
+cd .\mysql\
+
+# index command
+helm repo index .\charts\  
+```
+
+## Deploy TodoApi
+
+Deploying a **todoapi** using mysql database on a Kubernetes cluster via Helm.
+
+Here's a step-by-step guide to deploying your todoapi using mysql database using helm chart.
+
+**1. Create a New Chart**
+
+This command will create a new directory called todoapp with the structure and files of a basic chart.
+
+```
+helm create todoapp
+```
+
+When you first create a chart, it comes with a few example templates. Navigate to the templates directory inside your chart
+
+* delete everything under /templates, keeping only `_helpers.tpl`,`deployment.yaml`,`service.yaml`
+* delete `tests` folder under `templates`
+
+**2. Add Kubernetes files to our new Chart**
+
+* Add deployment.yaml
+
+```markdown
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ .Release.Name }}
+spec:
+  replicas: {{ .Values.replicaCount }}
+  selector:
+    matchLabels:
+      {{ include "todoapp.selectorLabels" . | nindent 6 }}
+  template:
+    metadata:
+      labels:
+        {{ include "todoapp.selectorLabels" . | nindent 8 }}
+    spec:
+      containers:
+      - name: {{ .Values.container.name }}
+        image: {{ .Values.image.repository }}
+        env:
+        - name: {{ .Values.env.name }}
+          value: svcmysql.default.svc.cluster.local
+        ports:
+        - containerPort: {{ .Values.service.targetPort }}
+```
+
+* Add service.yaml
+
+```markdown
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "todoapp.fullname" . }}
+  labels:
+    {{- include "todoapp.labels" . | nindent 4 }}
+spec:
+  type: {{ .Values.service.type }}
+  ports:
+    - port: {{ .Values.service.port }}
+      targetPort: {{ .Values.service.targetPort }}
+      protocol: TCP
+      name: http
+  selector:
+    {{- include "todoapp.selectorLabels" . | nindent 4 }}
+```
+
+* Add values.yaml
+
+```markdown
+replicaCount: 1
+
+image:
+  repository: vijaynvb/todoapih2:1.0
+
+service:
+  type: NodePort
+  port: 80
+  name: svctodoh2api
+  targetPort: 80
+
+container:
+  name: todoapimysql
+
+env:
+  name: MYSQL_HOST
+
+database:
+  enabled: true
+  disabled: false
+```
+
+* Add Chart.yaml
+
+In this file mysql dependency has been added to run mysql
+
+```
+apiVersion: v2
+name: todo-api
+description: A Helm chart for deploy todo application
+type: application
+version: 0.1.0
+appVersion: "0.0.1"
+dependencies:
+  - name: mysql
+    version: 0.1.0
+    condition: database.enabled
+    repository: https://vijaynvb.github.io/todoapi/Helm/TodoApi_MySQL/mysql/charts
+```
+
+**3. Update dependency to the chart**
+
+```
+helm dependency update .\todoapp\
+```
+
+* .\todoapp\ is chart directory
+* This command will pull mysql from the provided repository and link and save in the chart.
+* We can see chart.yaml file will be created and the details of dependency will be saved.
+
+**4. Install our app using our Chart**
+
+```
+helm install mysql .\mysql\
+
+# see our deployed components
+
+kubectl get all
+``` 
+
+**5. packaging the helm chart**
+
+A "package" refers to a compressed, tarred chart that has been prepared for distribution. It bundles all the essential details of a Helm chart into a single, versioned artifact, making it easy to share and deploy.
+
+```
+# change directory to helm chart folder
+cd .\mysql\
+
+# package command and save it in chart folder
+helm package . -d .\charts\  
+```
+
+**6. Creating the Chart Repository Index**
+
+A chart repository is an HTTP server that houses one or more chart packages. Each chart repository can have its own index.yaml file that contains information about available charts in that repository.
+
+```
+# change directory to helm chart folder
+cd .\mysql\
+
+# index command
+helm repo index .\charts\  
+```
+
+# Deploying using umbrella chart
+
+An umbrella chart, often called a meta-chart or parent chart, is a Helm chart that doesn't manage resources directly but instead depends on other Helm charts, called sub-charts or child charts. This approach allows grouping of multiple charts into one consolidated unit for deployment, making it useful for deploying complex applications that have multiple, separate components.
+
+The primary advantage of an umbrella chart is that it provides a way to manage, version, and deploy a collection of related charts as a single entity.
+
+**1. Create a New Chart**
+
+This command will create a new directory called Application_helm with the structure and files of a basic chart.
+
+```
+helm create Application_helm
+```
+
+When you first create a chart, it comes with a few example templates. Navigate to the templates directory inside your chart
+
+* delete everything under /templates, keeping only `_helpers.tpl`
+* delete `tests` folder under `templates`
+
+**2. Define Dependencies**
+
+* chart.yaml
+
+```
+apiVersion: v2
+name: application_helm
+description: A Helm chart for to deploy multiple microservices
+type: application
+version: 0.1.0
+appVersion: "1.16.0"
+dependencies:
+  - name: todo-api-h2
+    version: 0.1.0
+    condition: foo.enabled
+    repository: https://vijaynvb.github.io/todoapi/Helm/TodoApi_H2/charts
+  - name: todo-api
+    version: 0.1.0
+    condition: foo.enabled
+    repository: https://vijaynvb.github.io/todoapi/Helm/TodoApi_MySQL/todoapp/charts
+```
+
+* values.yaml
+
+```
+foo:
+  enabled: true
+  disabled: false
+```
+
+**3. Update dependency to the chart**
+
+```
+helm dependency update .\Application_helm\
+```
+
+* .\todoapp\ is chart directory
+* This command will pull mysql from the provided repository and link and save in the chart.
+* We can see chart.yaml file will be created and the details of dependency will be saved.
+
+**4. Install our app using our Chart**
+
+```
+helm install todo .\Application_helm\
+
+# see our deployed components
+
+kubectl get all
+``` 
+
+# Reference
+
+* [Helm Documentation](https://helm.sh/docs/)
+
+* [Helm Umbrella Chart](https://itnext.io/helm-3-umbrella-charts-global-values-in-sub-charts-666437d4ed28)
+
+* [Git Hub pages to host helm chart](https://www.youtube.com/watch?v=Xp8gTpSYyRo&t=1280s)
+
+* [Add dependencys to helm chart](https://www.youtube.com/watch?v=LAVCJorZ2AA)
