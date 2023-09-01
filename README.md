@@ -278,7 +278,7 @@ git push origin main  # or `master` if your default branch is master
 **6. Add the Repository to Helm**
 
 ```
-helm repo add my-charts https://your-username.github.io/repo-name/
+helm repo add my-first-chart https://your-username.github.io/repo-name/
 
 helm repo list
 # this command will show you the repositories which all are added.
@@ -295,7 +295,7 @@ helm repo update
 **8. Install chart from repo**
 
 ```
-helm search repo my-charts
+helm search repo my-first-chart
 # this command shows repo added to local
 
 helm install nginx my-first-chart/my-first-chart
