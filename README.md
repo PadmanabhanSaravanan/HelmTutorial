@@ -6,6 +6,7 @@
 
 * [**Introduction to Helm**](#introduction-to-helm)
 * [**Getting Started with Helm**](#getting-started-with-helm)
+* [**Host Helm Charts on GitHub Pages**](#host-helm-charts-on-github-pages)
 * [**Deploying single microservice**](#deploying-single-microservice)
 * [**Deploying multiple microservice**](#deploying-multiple-microservice)
 * [**Deploying using umbrella chart**](#deploying-using-umbrella-chart)
@@ -271,12 +272,16 @@ git push origin main  # or `master` if your default branch is master
 * Go to the settings of your repository on GitHub.
 * Navigate to the GitHub Pages section.
 * Set the source branch to main or master.
+* Save the source branch.
 * Your Helm repository is now available at https://your-username.github.io/repo-name/.
 
 **6. Add the Repository to Helm**
 
 ```
 helm repo add my-charts https://your-username.github.io/repo-name/
+
+helm repo list
+# this command will show you the repositories which all are added.
 ```
 
 **7. Update and Search**
@@ -285,7 +290,15 @@ Whenever you make changes, remember to update the Helm repo:
 
 ```
 helm repo update
+```
+
+**8. Install chart from repo**
+
+```
 helm search repo my-charts
+# this command shows repo added to local
+
+helm install nginx my-first-chart/my-first-chart
 ```
 
 And that's it! Your Helm charts are now hosted on GitHub Pages. Whenever you update your charts, remember to package the charts, update the index.yaml file, and push the changes to GitHub.
