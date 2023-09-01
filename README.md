@@ -215,6 +215,81 @@ helm uninstall nginx
 
 This command will delete all deployment and services installed.
 
+# Host Helm Charts on GitHub Pages
+
+You can host Helm charts on GitHub Pages. It's a simple, cost-effective way to maintain and serve Helm charts. Here's a step-by-step guide:
+
+**1. Create a GitHub Repository**
+
+* Create a new repository on GitHub.
+* Clone the repository locally:
+
+```
+git clone https://github.com/your-username/repo-name.git
+```
+
+**2. Initialize Helm in the Repository**
+
+Navigate to the cloned directory and either create a new Helm chart or add existing ones:
+
+```
+helm package . -d .\charts\  
+
+# .\charts\ - path-to-your-chart
+
+# This will create a .tgz package of your chart in the directory.
+```
+
+A "package" refers to a compressed, tarred chart that has been prepared for distribution. It bundles all the essential details of a Helm chart into a single, versioned artifact, making it easy to share and deploy
+
+**3. Create or Update the index file**
+
+If this is your first time, you'll need to create an index file. Otherwise, you'll update the existing one:
+
+```
+# change directory to chart folder
+
+cd .\charts\
+
+helm repo index .
+
+# This will generate (or update) an index.yaml file in your directory.
+```
+
+![image helm](Image/3.PNG)
+
+**4. Push to GitHub**
+
+```
+git add .
+git commit -m "Add new chart"
+git push origin main  # or `master` if your default branch is master
+```
+
+**5. Setup GitHub Pages**
+
+* Go to the settings of your repository on GitHub.
+* Navigate to the GitHub Pages section.
+* Set the source branch to main or master.
+* Your Helm repository is now available at https://your-username.github.io/repo-name/.
+
+**6. Add the Repository to Helm**
+
+```
+helm repo add my-charts https://your-username.github.io/repo-name/
+```
+
+**7. Update and Search**
+
+Whenever you make changes, remember to update the Helm repo:
+
+```
+helm repo update
+helm search repo my-charts
+```
+
+And that's it! Your Helm charts are now hosted on GitHub Pages. Whenever you update your charts, remember to package the charts, update the index.yaml file, and push the changes to GitHub.
+
 # Deploying single microservice
 
 Deploying a **todoapi** using an H2 database on a Kubernetes cluster via Helm requires multiple steps, from creating the application, Dockerizing it, pushing the Docker image to a registry, creating a Helm chart.

@@ -1,0 +1,13 @@
+replicaCount: 1
+
+image:
+  repository: nginx
+
+service:
+  type: NodePort
+  port: 80
+  name: nginx
+  targetPort: 80
+
+container:
+  name: nginx

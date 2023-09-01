@@ -1,0 +1,19 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: nginx
+spec:
+  replicas: {{ .Values.replicaCount }}
+  selector:
+    matchLabels:
+      {{ include "my-first-chart.selectorLabels" . | nindent 6 }}
+  template:
+    metadata:
+      labels:
+        {{ include "my-first-chart.selectorLabels" . | nindent 8 }}
+    spec:
+      containers:
+      - name: {{ .Values.container.name }}
+        image: {{ .Values.image.repository }}
+        ports:
+        - containerPort: {{ .Values.service.targetPort }}
